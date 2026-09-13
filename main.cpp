@@ -3,7 +3,7 @@
 #include <string>
 #include <csignal>
 #include <cstdlib>
-
+#include <exception>
 
 // class that renders ascii frame from a matrix captured from camera (cv::Mat)
 class AsciiRenderer {
@@ -71,6 +71,42 @@ public:
 };
 
 
+class AsciiApp {
+private:
+    cv::VideoCapture cap;
+    AsciiRenderer renderer;
+
+public:
+    // c-tor: open camera and prepare terminal
+    AsciiApp() : cap(1), renderer(120) {
+        if (!cap.isOpened()) {
+            throw std::runtime_error("Cannot open the camera.");
+        }
+        // clear terminal window by ANSI control code and hide the cursor
+        std::cout << "\x1b[2J\x1b[?25l";
+    }
+
+    // d-tor: cleanup
+    ~AsciiApp() {
+        // bring back the cursor and reset text color
+        std::cout << "\x1b[?25h\x1b[0m";
+        if (cap.isOpened()) {
+            cap.release();
+        }
+    }
+
+    // run main loop
+    void run() {
+        cv::Mat frame;
+        while (true) {
+            cap >> frame;
+            if (frame.empty()) break;
+            std::cout << renderer.renderFrame(frame) << std::flush;
+        }
+    }
+};
+
+
 void handle_sigint(int sig) {
     // restore cursor
     std::cout << "\x1b[?25h";
@@ -91,47 +127,15 @@ int main() {
     std::cout << "Starting program..." << std::endl;
     std::cout << "Searching for camera..." << std::endl;
 
-    cv::VideoCapture cap(1);
-
-    if (!cap.isOpened()) {
-        std::cerr << "Error: Cannot open the camera." << std::endl;
-        return -1;
-    }
-
     // handle SIGINT
     signal(SIGINT, handle_sigint);
 
-    // prepare environment (assuming black terminal);
-    // character palette
-    const std::string ASCII_CHARS = " .:-=+*#%@";
-
-    // target width of terminal window
-    const int terminalWidth = 120;
-
-    cv::Mat frame;
-
-    // clear terminal window by ANSI control code and hide the cursor
-    std::cout << "\x1b[2J\x1b[?25l";
-
-    // prepare an object that renders a frame
-    AsciiRenderer renderer(120);
-
-    // loop retrieving frames from camera
-    while (true) {
-        cap >> frame;
-
-        if (frame.empty()) {
-            std::cerr << "Error: Empty frame. Disconnecting..." << std::endl;
-            break;
-        }
-
-        // use object of class AsciiRenderer to render a frame
-        std::cout << renderer.renderFrame(frame) << std::flush;
+    try {
+        AsciiApp app;
+        app.run();
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
+        return -1;
     }
-
-    // release resources
-    std::cout << "\x1b[?25h\x1b[0m";
-    cap.release();
-    
     return 0;
 }
