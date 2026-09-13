@@ -1,6 +1,22 @@
 #include <opencv2/opencv.hpp>
 #include <iostream>
 #include <string>
+#include <csignal>
+
+void handle_sigint(int sig) {
+    // restore cursor
+    std::cout << "\x1b[?25h";
+
+    // reset text color
+    std::cout << "\x1b[0m";
+
+    // clear window
+    std::cout << "\nClosing ASCII camera...\n";
+
+    // terminate program
+    exit(0);
+}
+
 
 int main() {
     // open MacBook's built-in camera - id 1 (id 0 is iPhone's continuity camera)
@@ -14,6 +30,9 @@ int main() {
         return -1;
     }
 
+    // handle SIGINT
+    signal(SIGINT, handle_sigint);
+
     // prepare environment (assuming black terminal);
     // character palette
     const std::string ASCII_CHARS = " .:-=+*#%@";
@@ -23,8 +42,8 @@ int main() {
 
     cv::Mat frame, grayFrame, resizedGray, resizedColor;
 
-    // clear terminal window by ANSI control code
-    std::cout << "\x1b[2J";
+    // clear terminal window by ANSI control code and hide the cursor
+    std::cout << "\x1b[2J\x1b[?25l";
 
     // loop retrieving frames from camera
     while (true) {
@@ -88,6 +107,7 @@ int main() {
     }
 
     // release resources
+    std::cout << "\x1b[?25h\x1b[0m";
     cap.release();
     
     return 0;
