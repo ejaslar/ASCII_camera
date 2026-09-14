@@ -2,6 +2,8 @@
 #include <iostream>
 #include <cstdlib>
 #include <csignal>
+#include <termios.h>
+#include <unistd.h>
 
 
 AsciiApp* AsciiApp::instance = nullptr;
@@ -18,6 +20,12 @@ AsciiApp::AsciiApp() : cap(1), renderer(120), isRunning(true) {
 
     // clear terminal window by ANSI control code and hide the cursor
     std::cout << "\x1b[2J\x1b[?25l";
+
+    // disable printing ^C (cuz it destroys a frame after ctrl+C)
+    struct termios term;
+    tcgetattr(STDIN_FILENO, &term); // retrieve current terminal settings
+    term.c_lflag &= ~ECHOCTL;       // delete flag ECHOCTL (Echo Control Characters)
+    tcsetattr(STDIN_FILENO, TCSANOW, &term); // apply changes immediately
 
     // handle SIGINT;
     // it'll work without AsciiApp:: namespace, but it indicates that
@@ -54,6 +62,12 @@ void AsciiApp::cleanup() {
     if (cap.isOpened()) {
         cap.release();
     }
+
+    // restore ^C printing
+    struct termios term;
+    tcgetattr(STDIN_FILENO, &term);
+    term.c_lflag |= ECHOCTL; // add flag ECHOCTL back
+    tcsetattr(STDIN_FILENO, TCSANOW, &term);
 }
 
 void AsciiApp::signalHandler(int sig) {
