@@ -8,7 +8,7 @@ AsciiApp* AsciiApp::instance = nullptr;
 
 // c-tor: open camera and prepare terminal;
 // id 1 is MacBook's built-in camera (id 0 is iPhone's continuity camera)
-AsciiApp::AsciiApp() : cap(1), renderer(120) {
+AsciiApp::AsciiApp() : cap(1), renderer(120), isRunning(true) {
     std::cout << "Searching for camera..." << std::endl;
     if (!cap.isOpened()) {
         throw std::runtime_error("Cannot open the camera.");
@@ -33,7 +33,7 @@ AsciiApp::~AsciiApp() {
 // run main loop
 void AsciiApp::run() {
     cv::Mat frame;
-    while (true) {
+    while (isRunning) {
         cap >> frame;
         if (frame.empty()) {
             throw std::runtime_error("Problem with camera. Captured frame is empty.");
@@ -58,7 +58,6 @@ void AsciiApp::cleanup() {
 
 void AsciiApp::signalHandler(int sig) {
     if (instance) {
-        instance->cleanup();
-        exit(0);
+        instance->isRunning = false;
     }
 }
