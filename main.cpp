@@ -17,10 +17,7 @@ private:
 public:
     AsciiRenderer(int width = 120) : targetWidth(width), ASCII_CHARS(" .:-=+*#%@") {}
 
-    std::string renderFrame(cv::Mat& frame) {
-        // make mirror reflection of the frame
-        cv::flip(frame, frame, 1);
-
+    std::string renderFrame(const cv::Mat& frame) {
         // calculate new frame ratios (assuming font height to width ratio is 2)
         float frameRatio = (float)frame.rows / frame.cols;
         int targetHeight = targetWidth * frameRatio * 0.5f;
@@ -80,8 +77,10 @@ private:
     static AsciiApp* instance;
 
 public:
-    // c-tor: open camera and prepare terminal
+    // c-tor: open camera and prepare terminal;
+    // id 1 is MacBook's built-in camera (id 0 is iPhone's continuity camera)
     AsciiApp() : cap(1), renderer(120) {
+        std::cout << "Searching for camera..." << std::endl;
         if (!cap.isOpened()) {
             throw std::runtime_error("Cannot open the camera.");
         }
@@ -91,7 +90,9 @@ public:
         // clear terminal window by ANSI control code and hide the cursor
         std::cout << "\x1b[2J\x1b[?25l";
 
-        // handle SIGINT
+        // handle SIGINT;
+        // it'll work without AsciiApp:: namespace, but it indicates that
+        // signalHandler is a class function and not some global one from the file;
         signal(SIGINT, AsciiApp::signalHandler);
     }
 
@@ -105,7 +106,14 @@ public:
         cv::Mat frame;
         while (true) {
             cap >> frame;
-            if (frame.empty()) break;
+            if (frame.empty()) {
+                throw std::runtime_error("Problem with camera. Captured frame is empty.");
+            }
+
+            // make mirror reflection of the frame
+            cv::flip(frame, frame, 1);
+
+            // render frame in terminal window
             std::cout << renderer.renderFrame(frame) << std::flush;
         }
     }
@@ -133,7 +141,6 @@ AsciiApp* AsciiApp::instance = nullptr;
 
 int main() {
     std::cout << "Starting program..." << std::endl;
-    std::cout << "Searching for camera..." << std::endl;
 
     try {
         AsciiApp app;
