@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <exception>
 
+
 // class that renders ascii frame from a matrix captured from camera (cv::Mat)
 class AsciiRenderer {
 private:
@@ -71,10 +72,12 @@ public:
 };
 
 
+// class encapsulating app logic
 class AsciiApp {
 private:
     cv::VideoCapture cap;
     AsciiRenderer renderer;
+    static AsciiApp* instance;
 
 public:
     // c-tor: open camera and prepare terminal
@@ -82,17 +85,19 @@ public:
         if (!cap.isOpened()) {
             throw std::runtime_error("Cannot open the camera.");
         }
+
+        instance = this;
+
         // clear terminal window by ANSI control code and hide the cursor
         std::cout << "\x1b[2J\x1b[?25l";
+
+        // handle SIGINT
+        signal(SIGINT, AsciiApp::signalHandler);
     }
 
     // d-tor: cleanup
     ~AsciiApp() {
-        // bring back the cursor and reset text color
-        std::cout << "\x1b[?25h\x1b[0m";
-        if (cap.isOpened()) {
-            cap.release();
-        }
+        cleanup();
     }
 
     // run main loop
@@ -104,31 +109,31 @@ public:
             std::cout << renderer.renderFrame(frame) << std::flush;
         }
     }
+
+private:
+    void cleanup() {
+        // bring back the cursor and reset text color
+        std::cout << "\x1b[?25h\x1b[0m";
+        std::cout << "\nClosing ASCII camera...\n";
+        if (cap.isOpened()) {
+            cap.release();
+        }
+    }
+
+    static void signalHandler(int sig) {
+        if (instance) {
+            instance->cleanup();
+            exit(0);
+        }
+    }
 };
 
-
-void handle_sigint(int sig) {
-    // restore cursor
-    std::cout << "\x1b[?25h";
-
-    // reset text color
-    std::cout << "\x1b[0m";
-
-    // clear window
-    std::cout << "\nClosing ASCII camera...\n";
-
-    // terminate program
-    exit(0);
-}
+AsciiApp* AsciiApp::instance = nullptr;
 
 
 int main() {
-    // open MacBook's built-in camera - id 1 (id 0 is iPhone's continuity camera)
     std::cout << "Starting program..." << std::endl;
     std::cout << "Searching for camera..." << std::endl;
-
-    // handle SIGINT
-    signal(SIGINT, handle_sigint);
 
     try {
         AsciiApp app;
