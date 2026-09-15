@@ -25,6 +25,7 @@ AsciiApp::AsciiApp() : cap(1), renderer(120), isRunning(true) {
     struct termios term;
     tcgetattr(STDIN_FILENO, &term); // retrieve current terminal settings
     term.c_lflag &= ~ECHOCTL;       // delete flag ECHOCTL (Echo Control Characters)
+    term.c_lflag |= NOFLSH;         // block system I/O buffer flushing
     tcsetattr(STDIN_FILENO, TCSANOW, &term); // apply changes immediately
 
     // handle SIGINT;
@@ -67,6 +68,7 @@ void AsciiApp::cleanup() {
     struct termios term;
     tcgetattr(STDIN_FILENO, &term);
     term.c_lflag |= ECHOCTL; // add flag ECHOCTL back
+    term.c_lflag &= ~NOFLSH; // delete NOFLSH flag (bring default bufor flushing back)
     tcsetattr(STDIN_FILENO, TCSANOW, &term);
 }
 
