@@ -8,11 +8,11 @@ set(CMAKE_CXX_STANDARD 17)
 find_package(OpenCV REQUIRED)
 
 # compile main.cpp into an executable of a given name
-add_executable(ascii_camera
+add_executable(ASCII_camera
     main.cpp
     AsciiRenderer.cpp
     AsciiApp.cpp
 )
 
 # link executable with OpenCV library
-target_link_libraries(ascii_camera ${OpenCV_LIBS})
+target_link_libraries(ASCII_camera ${OpenCV_LIBS})
